@@ -1,3 +1,8 @@
+## 0.0.2
+
+* Added support for Enum descendant properties.
+* Added basic Enum editor built-in.
+
 ## 0.0.1
 
 * Initial commit. Inspectable stuff + built in basic editors.

@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:inspectable_property/editors/editor_bool.dart';
 import 'package:inspectable_property/editors/editor_double.dart';
+import 'package:inspectable_property/editors/editor_enum.dart';
 import 'package:inspectable_property/editors/editor_int.dart';
 import 'editor_base.dart';
 import 'editors/editor_string.dart';
@@ -107,6 +108,20 @@ class InspectorState extends State<Inspector> {
           customData: customData,
           onUpdatedProperty: onUpdatedProperty,
         ),
+        Enum:
+            ({
+          Key? key,
+          required List<Inspectable> owners,
+          required String propertyName,
+          Object? customData,
+          void Function(dynamic value)? onUpdatedProperty,
+        }) => EditorEnum(
+          key: key,
+          owners: owners,
+          propertyName: propertyName,
+          customData: customData,
+          onUpdatedProperty: onUpdatedProperty,
+        ),
       });
   }
 
@@ -132,7 +147,11 @@ class InspectorState extends State<Inspector> {
     var property = owners[0].getProperty(propertyName) as InspectableProperty;
     //dynamic t = property.getValue(owners[0]);
     Type type = property.type;
-    final editorBuilder = editors[type];
+    var editorBuilder = editors[type];
+    if (editorBuilder == null && type is Enum) {
+      type = Enum;
+      editorBuilder = editors[type];
+    }
     if (editorBuilder != null) {
       editor = editorBuilder(
         key: k,
