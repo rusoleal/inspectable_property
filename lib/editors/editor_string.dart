@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../editor_base.dart';
 import '../inspectable.dart';
 
+/// Editor for [String] properties. Delegates rendering to [EditorStringWidget].
 class EditorString extends EditorBase<String> {
   EditorString({
     super.key,
@@ -23,10 +24,21 @@ class EditorString extends EditorBase<String> {
   }
 }
 
+/// A [TextField]-based widget for editing string properties.
+///
+/// When multiple owners have differing values the field starts empty.
+/// Empty input is treated as `null` when the property is nullable.
 class EditorStringWidget extends StatefulWidget {
+  /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
+
+  /// The name used to look up the [InspectableProperty] on each owner.
   final String propertyName;
+
+  /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
+
+  /// Called after the property value is updated.
   final void Function(dynamic value)? onUpdateProperty;
 
   const EditorStringWidget({
@@ -43,10 +55,18 @@ class EditorStringWidget extends StatefulWidget {
   }
 }
 
+/// State for [EditorStringWidget].
 class EditorStringWidgetState extends State<EditorStringWidget> {
+  /// Controller for the string text field.
   late TextEditingController ted;
+
+  /// Dropdown items when the property has a fixed set of allowed values.
   List<DropdownMenuItem<String>>? _items;
+
+  /// Whether the property is read-only (disables editing).
   bool readOnlyProperty = false;
+
+  /// Whether the property accepts null values (empty text becomes `null`).
   bool nullableProperty = true;
 
   @override

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:inspectable_property/editor_base.dart';
 import 'package:inspectable_property/inspectable.dart';
 
+/// Editor for [Enum] properties. Delegates rendering to [EditorEnumWidget].
+///
+/// The property must provide a [InspectableProperty.values] callback that
+/// returns the list of enum variants.
 class EditorEnum extends EditorBase<Enum> {
   EditorEnum({
     super.key,
@@ -23,10 +27,21 @@ class EditorEnum extends EditorBase<Enum> {
   }
 }
 
+/// A [DropdownButton]-based widget for editing enum properties.
+///
+/// Populates the dropdown from [InspectableProperty.values]. When the property
+/// is nullable, an empty option is appended to the dropdown items.
 class EditorEnumWidget extends StatefulWidget {
+  /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
+
+  /// The name used to look up the [InspectableProperty] on each owner.
   final String propertyName;
+
+  /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
+
+  /// Called after the property value is updated.
   final void Function(dynamic value)? onUpdateProperty;
 
   const EditorEnumWidget({
@@ -43,8 +58,12 @@ class EditorEnumWidget extends StatefulWidget {
   }
 }
 
+/// State for [EditorEnumWidget].
 class EditorEnumWidgetState extends State<EditorEnumWidget> {
+  /// Whether the property is read-only (disables editing).
   bool readOnlyProperty = false;
+
+  /// Whether the property accepts null values (adds an empty dropdown option).
   bool nullable = false;
 
   @override

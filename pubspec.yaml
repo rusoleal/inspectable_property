@@ -1,6 +1,6 @@
 name: inspectable_property
-description: "Improve your classes with reflection capabilities"
-version: 0.0.2
+description: "Improve your classes with reflection capabilities. Use a visual inspector to read/write inspectable properties."
+version: 0.0.3
 repository: https://github.com/rusoleal/inspectable_property
 
 environment:

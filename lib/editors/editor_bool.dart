@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../editor_base.dart';
 import '../inspectable.dart';
 
+/// Editor for [bool] properties. Delegates rendering to [EditorBoolWidget].
 class EditorBool extends EditorBase<bool> {
   EditorBool({
     super.key,
@@ -23,10 +24,21 @@ class EditorBool extends EditorBase<bool> {
   }
 }
 
+/// A [Checkbox]-based widget for editing boolean properties.
+///
+/// Supports tristate mode when the property is marked as [InspectableProperty.nullable].
+/// When multiple owners have differing values the checkbox shows an indeterminate state.
 class EditorBoolWidget extends StatefulWidget {
+  /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
+
+  /// The name used to look up the [InspectableProperty] on each owner.
   final String propertyName;
+
+  /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
+
+  /// Called after the property value is updated.
   final void Function(dynamic value)? onUpdateProperty;
 
   const EditorBoolWidget({
@@ -43,9 +55,15 @@ class EditorBoolWidget extends StatefulWidget {
   }
 }
 
+/// State for [EditorBoolWidget].
 class EditorBoolWidgetState extends State<EditorBoolWidget> {
+  /// Whether the property is read-only (disables editing).
   bool readOnlyProperty = false;
+
+  /// The current checkbox value. `null` indicates an indeterminate state.
   bool? value;
+
+  /// Whether the property accepts null values (enables tristate checkbox).
   bool nullable = false;
 
   @override

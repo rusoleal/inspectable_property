@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../editor_base.dart';
 import '../inspectable.dart';
 
+/// Editor for [int] properties. Delegates rendering to [EditorIntWidget].
 class EditorInt extends EditorBase<int> {
   EditorInt({
     super.key,
@@ -23,10 +24,21 @@ class EditorInt extends EditorBase<int> {
   }
 }
 
+/// A [TextField]-based widget for editing integer properties.
+///
+/// Parses text input as an integer and applies the value to all [owners].
+/// When multiple owners have differing values the field starts empty.
 class EditorIntWidget extends StatefulWidget {
+  /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
+
+  /// The name used to look up the [InspectableProperty] on each owner.
   final String propertyName;
+
+  /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
+
+  /// Called after the property value is updated.
   final void Function(dynamic value)? onUpdateProperty;
 
   const EditorIntWidget({
@@ -43,8 +55,12 @@ class EditorIntWidget extends StatefulWidget {
   }
 }
 
+/// State for [EditorIntWidget].
 class EditorIntWidgetState extends State<EditorIntWidget> {
+  /// Controller for the integer text field.
   late TextEditingController ted;
+
+  /// Whether the property is read-only (disables editing).
   bool readOnlyProperty = false;
 
   @override
