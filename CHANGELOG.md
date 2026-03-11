@@ -1,3 +1,7 @@
+## 0.0.3
+
+* Upgraded readme and doc comments.
+
 ## 0.0.2
 
 * Added support for Enum descendant properties.

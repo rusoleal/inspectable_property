@@ -3,8 +3,11 @@ import 'package:sprintf/sprintf.dart';
 import '../editor_base.dart';
 import '../inspectable.dart';
 
-/// Editor for [double] properties. Delegates rendering to [EditorDoubleWidget].
+/// [EditorBase] implementation for [double] properties.
+///
+/// Delegates the actual widget to [EditorDoubleWidget].
 class EditorDouble extends EditorBase<double> {
+  /// Creates an [EditorDouble].
   EditorDouble({
     super.key,
     required super.owners,
@@ -13,6 +16,7 @@ class EditorDouble extends EditorBase<double> {
     super.onUpdatedProperty,
   });
 
+  /// Returns an [EditorDoubleWidget] configured with this editor's parameters.
   @override
   Widget getWidget(BuildContext context) {
     return EditorDoubleWidget(
@@ -27,9 +31,16 @@ class EditorDouble extends EditorBase<double> {
 
 /// A widget for editing double properties.
 ///
-/// Renders a [Slider] when the property has a [InspectableProperty.clamp]
-/// range set, otherwise renders a [TextField] with double parsing.
-/// When multiple owners have differing values the field starts empty.
+/// Chooses its presentation based on the property's [InspectableProperty.clamp]
+/// setting:
+///
+/// - **Slider** — rendered when a single owner has a `clamp` range set,
+///   providing immediate visual feedback within the min/max bounds.
+/// - **TextField** — rendered otherwise; parses input as a double on each
+///   change and applies it to all owners. The slider mode is disabled when
+///   multiple owners are selected to avoid ambiguity.
+///
+/// When multiple owners hold differing values the field starts empty.
 class EditorDoubleWidget extends StatefulWidget {
   /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
@@ -40,9 +51,10 @@ class EditorDoubleWidget extends StatefulWidget {
   /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
 
-  /// Called after the property value is updated.
+  /// Called after the property value is successfully updated.
   final void Function(dynamic value)? onUpdateProperty;
 
+  /// Creates an [EditorDoubleWidget].
   const EditorDoubleWidget({
     super.key,
     required this.owners,
@@ -59,21 +71,26 @@ class EditorDoubleWidget extends StatefulWidget {
 
 /// State for [EditorDoubleWidget].
 class EditorDoubleWidgetState extends State<EditorDoubleWidget> {
-  /// Controller for the double text field (used when no clamp is set).
+  /// Controller that drives the [TextField] when no clamp range is set.
   late TextEditingController ted;
 
-  /// Whether the property is read-only (disables editing).
+  /// Whether any owner has marked this property as read-only.
   bool readOnlyProperty = false;
 
-  /// Whether the property accepts null values.
+  /// Whether any owner allows null values for this property.
   bool isNullable = true;
 
-  /// Optional (min, max) range. When set, a [Slider] is rendered instead of a text field.
+  /// The (min, max) clamp range, or `null` when there is no range restriction.
+  ///
+  /// Set to `null` when multiple owners are selected, since the slider only
+  /// makes sense for a single-object selection.
   (double, double)? clamp;
 
-  /// The current slider value, tracked locally for immediate feedback.
+  /// Tracks the current slider value for immediate UI feedback.
   double? initialValue = 0.0;
 
+  /// Reads the initial value and metadata (clamp, readOnly, nullable) from the
+  /// owners. Disables slider mode when more than one owner is selected.
   @override
   void initState() {
     super.initState();
@@ -116,6 +133,8 @@ class EditorDoubleWidgetState extends State<EditorDoubleWidget> {
     );
   }
 
+  /// Builds either a [Slider.adaptive] or a [TextField] depending on whether
+  /// [clamp] is set.
   @override
   Widget build(BuildContext context) {
     if (clamp != null) {

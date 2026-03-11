@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../editor_base.dart';
 import '../inspectable.dart';
 
-/// Editor for [int] properties. Delegates rendering to [EditorIntWidget].
+/// [EditorBase] implementation for [int] properties.
+///
+/// Delegates the actual widget to [EditorIntWidget].
 class EditorInt extends EditorBase<int> {
+  /// Creates an [EditorInt].
   EditorInt({
     super.key,
     required super.owners,
@@ -12,6 +15,7 @@ class EditorInt extends EditorBase<int> {
     super.onUpdatedProperty,
   });
 
+  /// Returns an [EditorIntWidget] configured with this editor's parameters.
   @override
   Widget getWidget(BuildContext context) {
     return EditorIntWidget(
@@ -26,8 +30,10 @@ class EditorInt extends EditorBase<int> {
 
 /// A [TextField]-based widget for editing integer properties.
 ///
-/// Parses text input as an integer and applies the value to all [owners].
-/// When multiple owners have differing values the field starts empty.
+/// Parses text input as an integer on every keystroke and immediately applies
+/// the parsed value to all [owners]. Non-integer input is silently ignored
+/// until a valid integer is formed. When multiple owners hold differing values
+/// the field starts empty to indicate a mixed-value state.
 class EditorIntWidget extends StatefulWidget {
   /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
@@ -38,9 +44,10 @@ class EditorIntWidget extends StatefulWidget {
   /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
 
-  /// Called after the property value is updated.
+  /// Called after the property value is successfully updated.
   final void Function(dynamic value)? onUpdateProperty;
 
+  /// Creates an [EditorIntWidget].
   const EditorIntWidget({
     super.key,
     required this.owners,
@@ -57,12 +64,16 @@ class EditorIntWidget extends StatefulWidget {
 
 /// State for [EditorIntWidget].
 class EditorIntWidgetState extends State<EditorIntWidget> {
-  /// Controller for the integer text field.
+  /// Controller that drives the integer [TextField].
   late TextEditingController ted;
 
-  /// Whether the property is read-only (disables editing).
+  /// Whether any owner has marked this property as read-only.
+  ///
+  /// When `true`, user input is ignored even though the field is visible.
   bool readOnlyProperty = false;
 
+  /// Reads the initial value from the first owner, resets to `null` when
+  /// owners disagree, and detects the read-only flag across all owners.
   @override
   void initState() {
     super.initState();
@@ -95,6 +106,7 @@ class EditorIntWidgetState extends State<EditorIntWidget> {
     ted = TextEditingController(text: value != null ? value.toString() : '');
   }
 
+  /// Builds a dense [TextField] that writes parsed integers back to all owners.
   @override
   Widget build(BuildContext context) {
     return TextField(

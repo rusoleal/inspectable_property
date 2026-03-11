@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:inspectable_property/editor_base.dart';
 import 'package:inspectable_property/inspectable.dart';
 
-/// Editor for [Enum] properties. Delegates rendering to [EditorEnumWidget].
+/// [EditorBase] implementation for [Enum] properties.
 ///
-/// The property must provide a [InspectableProperty.values] callback that
-/// returns the list of enum variants.
+/// Delegates the actual widget to [EditorEnumWidget]. The property **must**
+/// provide a [InspectableProperty.values] callback that returns the full list
+/// of enum variants; omitting it will cause a runtime error.
 class EditorEnum extends EditorBase<Enum> {
+  /// Creates an [EditorEnum].
   EditorEnum({
     super.key,
     required super.owners,
@@ -15,6 +17,7 @@ class EditorEnum extends EditorBase<Enum> {
     super.onUpdatedProperty,
   });
 
+  /// Returns an [EditorEnumWidget] configured with this editor's parameters.
   @override
   Widget getWidget(BuildContext context) {
     return EditorEnumWidget(
@@ -29,8 +32,13 @@ class EditorEnum extends EditorBase<Enum> {
 
 /// A [DropdownButton]-based widget for editing enum properties.
 ///
-/// Populates the dropdown from [InspectableProperty.values]. When the property
-/// is nullable, an empty option is appended to the dropdown items.
+/// Populates the dropdown from [InspectableProperty.values] and applies the
+/// selected value to all [owners] on change. Two optional behaviours:
+///
+/// - **Nullable** — when [InspectableProperty.nullable] is `true`, an extra
+///   empty item is appended so the user can select `null`.
+/// - **Read-only** — the dropdown's `onChanged` callback is suppressed when
+///   any owner marks the property as read-only.
 class EditorEnumWidget extends StatefulWidget {
   /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
@@ -41,9 +49,10 @@ class EditorEnumWidget extends StatefulWidget {
   /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
 
-  /// Called after the property value is updated.
+  /// Called after the property value is successfully updated.
   final void Function(dynamic value)? onUpdateProperty;
 
+  /// Creates an [EditorEnumWidget].
   const EditorEnumWidget({
     super.key,
     required this.owners,
@@ -60,12 +69,16 @@ class EditorEnumWidget extends StatefulWidget {
 
 /// State for [EditorEnumWidget].
 class EditorEnumWidgetState extends State<EditorEnumWidget> {
-  /// Whether the property is read-only (disables editing).
+  /// Whether any owner has marked this property as read-only.
   bool readOnlyProperty = false;
 
-  /// Whether the property accepts null values (adds an empty dropdown option).
+  /// Whether the property accepts `null` as a valid enum value.
+  ///
+  /// When `true`, an extra empty [DropdownMenuItem] is added at the end of
+  /// the dropdown list.
   bool nullable = false;
 
+  /// Detects read-only and nullable flags across all owners.
   @override
   void initState() {
     super.initState();
@@ -81,6 +94,12 @@ class EditorEnumWidgetState extends State<EditorEnumWidget> {
     }
   }
 
+  /// Builds an expanded [DropdownButton] whose items come from
+  /// [InspectableProperty.values].
+  ///
+  /// The selected value is read from the first owner on every build, so the
+  /// dropdown always reflects the current state. Changes are applied to all
+  /// owners simultaneously.
   @override
   Widget build(BuildContext context) {
     Enum? value;

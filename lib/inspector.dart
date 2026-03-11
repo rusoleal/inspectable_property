@@ -8,10 +8,24 @@ import 'editor_base.dart';
 import 'editors/editor_string.dart';
 import 'inspectable.dart';
 
-/// Factory function signature for creating property editors.
+/// Factory function signature for creating property editor instances.
 ///
-/// Used to register custom editors in the [Inspector] widget's `editors` map,
-/// keyed by the property's [Type].
+/// Used to register custom editors in [Inspector.editors], keyed by the
+/// property's runtime [Type]. Each factory receives the owning objects and
+/// property name, plus optional [customData] and an [onUpdatedProperty]
+/// callback.
+///
+/// Example registration:
+/// ```dart
+/// Inspector(
+///   objects: [myObj],
+///   editors: {
+///     MyType: ({key, required owners, required propertyName,
+///               customData, onUpdatedProperty}) =>
+///         MyTypeEditor(key: key, owners: owners, propertyName: propertyName),
+///   },
+/// )
+/// ```
 typedef EditorBuilder =
     EditorBase Function({
       Key? key,
@@ -24,28 +38,41 @@ typedef EditorBuilder =
 /// A widget that renders a table of type-aware editors for one or more
 /// [Inspectable] objects.
 ///
-/// When multiple objects are provided, only properties common to all objects
-/// are shown. Values that differ across objects appear blank in the editor.
+/// When a single object is passed, every property registered in its
+/// [Inspectable.properties] list is shown. When multiple objects are passed,
+/// only properties **common to all objects** (same name and runtime type) are
+/// displayed. Fields whose values differ across objects appear blank in the
+/// editor; committing a change applies the new value to every object.
 ///
 /// Built-in editors are provided for [int], [double], [bool], [String], and
-/// [Enum]. Additional editors can be supplied via the [editors] map; user-
-/// supplied editors take precedence over built-ins.
+/// [Enum]. Additional editors supplied via [editors] take precedence over the
+/// built-ins. A property can also opt out of the type lookup by specifying a
+/// [InspectableProperty.customEditor] key.
 class Inspector extends StatefulWidget {
-  /// Map of property [Type] to [EditorBuilder] factory. User-supplied entries
-  /// override the built-in editors.
+  /// Custom editor factories keyed by property [Type].
+  ///
+  /// Entries here override the corresponding built-in editor. To add support
+  /// for an entirely new type, simply add an entry for that type.
   final Map<Type, EditorBuilder> editors;
 
-  /// The list of [Inspectable] objects whose properties are displayed.
+  /// The [Inspectable] objects whose properties are displayed and edited.
   final List<Inspectable> objects;
 
-  /// Optional data forwarded to each editor and ultimately to
-  /// [InspectableProperty.setValue].
+  /// Arbitrary data passed through to each editor and ultimately to
+  /// [InspectableProperty.setValue] on every change.
   final Object? customData;
 
-  /// Called whenever any property value is updated through the inspector.
+  /// Called whenever any property value is committed through the inspector.
+  ///
+  /// The [properties] list is currently empty (reserved for future use); the
+  /// [value] argument carries the newly committed value.
   final void Function(List<InspectableProperty> properties, dynamic value)?
   onUpdatedProperty;
 
+  /// Creates an [Inspector].
+  ///
+  /// [objects] defaults to an empty list and [editors] defaults to an empty
+  /// map when not provided.
   const Inspector({
     super.key,
     Map<Type, EditorBuilder>? editors,
@@ -63,16 +90,31 @@ class Inspector extends StatefulWidget {
 
 /// State for the [Inspector] widget.
 class InspectorState extends State<Inspector> {
-  /// Snapshot of the current objects list, used to detect changes across rebuilds.
+  /// Snapshot of the objects list from the previous build.
+  ///
+  /// Compared against [Inspector.objects] each build to detect when the
+  /// selection has changed, which clears the [keys] cache.
   late List<Inspectable> objects;
 
-  /// Cache of [GlobalKey]s keyed by property name, ensuring editors maintain
-  /// state across rebuilds.
+  /// Stable [GlobalKey]s keyed by property name.
+  ///
+  /// Reusing the same key across builds ensures editor widgets preserve their
+  /// internal state (e.g. text cursor position) while the property list is
+  /// re-rendered.
   final Map<String, Key> keys = {};
 
-  /// Merged editor map (user-supplied + built-in defaults).
+  /// The effective editor map, combining user-supplied editors with the
+  /// built-in defaults.
+  ///
+  /// User-supplied entries (from [Inspector.editors]) are inserted first so
+  /// they override built-ins for the same type.
   late Map<Type, EditorBuilder> editors;
 
+  /// Initialises the effective [editors] map by merging user-supplied entries
+  /// with the built-in editors for [int], [double], [bool], [String], and
+  /// [Enum].
+  ///
+  /// User-supplied editors take precedence over built-ins.
   @override
   void initState() {
     super.initState();
@@ -154,16 +196,24 @@ class InspectorState extends State<Inspector> {
       });
   }
 
-  /// Forwards property change notifications to the widget's [Inspector.onUpdatedProperty] callback.
+  /// Forwards a property-change notification to [Inspector.onUpdatedProperty].
   void propertyUpdated(dynamic value) {
     if (widget.onUpdatedProperty != null) {
       widget.onUpdatedProperty!([], value);
     }
   }
 
-  /// Builds a [TableRow] for a single property, resolving the appropriate
-  /// editor based on the property's type. The [level] parameter controls
-  /// indentation for nested sub-properties.
+  /// Builds a single [TableRow] for [propertyName], resolving the editor to
+  /// use via the [editors] map.
+  ///
+  /// Resolution order:
+  /// 1. Exact type match in [editors].
+  /// 2. Fall back to [Enum] editor when the exact type is not registered but
+  ///    the property type is an enum subtype.
+  /// 3. Fall back to the read-only [EditorBase] when no editor is found.
+  ///
+  /// The [level] parameter increases the left-side indentation for nested
+  /// sub-properties.
   TableRow populateProperty(
     List<Inspectable> owners,
     String propertyName,
@@ -228,8 +278,12 @@ class InspectorState extends State<Inspector> {
     return toReturn;
   }
 
-  /// Returns a set of (name, runtimeType) pairs for all properties on [obj].
-  /// Used to compute the intersection of common properties across multiple objects.
+  /// Returns a set of `(name, runtimeType)` pairs for all properties on [obj].
+  ///
+  /// The runtime type is obtained by reading the current value, so the set
+  /// only includes properties with non-null values. This set is used to
+  /// compute the intersection of common properties when [Inspector.objects]
+  /// contains multiple objects.
   Set<(String, Type)> getObjectPropertySet(Inspectable obj) {
     Set<(String, Type)> toReturn = {};
 
@@ -241,6 +295,12 @@ class InspectorState extends State<Inspector> {
     return toReturn;
   }
 
+  /// Builds the inspector table.
+  ///
+  /// Computes the intersection of properties across all [Inspector.objects],
+  /// then renders one [TableRow] per common property. The [keys] cache is
+  /// cleared whenever the objects list changes so editors are recreated with
+  /// fresh state.
   @override
   Widget build(BuildContext context) {
     List<TableRow> fields = [];

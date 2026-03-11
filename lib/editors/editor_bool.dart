@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../editor_base.dart';
 import '../inspectable.dart';
 
-/// Editor for [bool] properties. Delegates rendering to [EditorBoolWidget].
+/// [EditorBase] implementation for [bool] properties.
+///
+/// Delegates the actual widget to [EditorBoolWidget].
 class EditorBool extends EditorBase<bool> {
+  /// Creates an [EditorBool].
   EditorBool({
     super.key,
     required super.owners,
@@ -12,6 +15,7 @@ class EditorBool extends EditorBase<bool> {
     super.onUpdatedProperty,
   });
 
+  /// Returns an [EditorBoolWidget] configured with this editor's parameters.
   @override
   Widget getWidget(BuildContext context) {
     return EditorBoolWidget(
@@ -26,8 +30,13 @@ class EditorBool extends EditorBase<bool> {
 
 /// A [Checkbox]-based widget for editing boolean properties.
 ///
-/// Supports tristate mode when the property is marked as [InspectableProperty.nullable].
-/// When multiple owners have differing values the checkbox shows an indeterminate state.
+/// Renders an adaptive checkbox that applies the new value to all [owners]
+/// when tapped. Two special modes are activated by property metadata:
+///
+/// - **Tristate** — enabled when [InspectableProperty.nullable] is `true`.
+///   The checkbox cycles through `true → false → null`.
+/// - **Mixed-value** — when multiple owners hold differing values the checkbox
+///   starts in the indeterminate (`null`) state.
 class EditorBoolWidget extends StatefulWidget {
   /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
@@ -38,9 +47,10 @@ class EditorBoolWidget extends StatefulWidget {
   /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
 
-  /// Called after the property value is updated.
+  /// Called after the property value is successfully updated.
   final void Function(dynamic value)? onUpdateProperty;
 
+  /// Creates an [EditorBoolWidget].
   const EditorBoolWidget({
     super.key,
     required this.owners,
@@ -57,15 +67,21 @@ class EditorBoolWidget extends StatefulWidget {
 
 /// State for [EditorBoolWidget].
 class EditorBoolWidgetState extends State<EditorBoolWidget> {
-  /// Whether the property is read-only (disables editing).
+  /// Whether any owner has marked this property as read-only.
   bool readOnlyProperty = false;
 
-  /// The current checkbox value. `null` indicates an indeterminate state.
+  /// The current checkbox state.
+  ///
+  /// `null` represents the indeterminate state, shown when [nullable] is
+  /// `true` or when owners hold differing values.
   bool? value;
 
-  /// Whether the property accepts null values (enables tristate checkbox).
+  /// Whether the property accepts `null` (enables tristate checkbox mode).
   bool nullable = false;
 
+  /// Reads the initial value from owners and detects read-only / nullable flags.
+  ///
+  /// Sets [value] to `null` when owners disagree to indicate a mixed state.
   @override
   void initState() {
     super.initState();
@@ -97,6 +113,10 @@ class EditorBoolWidgetState extends State<EditorBoolWidget> {
     }
   }
 
+  /// Builds an adaptive [Checkbox] with optional tristate support.
+  ///
+  /// Changes are applied to all owners simultaneously unless the property is
+  /// read-only.
   @override
   Widget build(BuildContext context) {
     return Checkbox.adaptive(

@@ -1,5 +1,5 @@
 name: inspectable_property
-description: "Improve your classes with reflection capabilities. Use a visual inspector to read/write inspectable properties."
+description: "Add reflection-like runtime inspection to your Dart classes. Mix in Inspectable and use the Inspector widget to view and edit typed properties — no code generation required."
 version: 0.0.3
 repository: https://github.com/rusoleal/inspectable_property
 

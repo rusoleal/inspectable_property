@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../editor_base.dart';
 import '../inspectable.dart';
 
-/// Editor for [String] properties. Delegates rendering to [EditorStringWidget].
+/// [EditorBase] implementation for [String] properties.
+///
+/// Delegates the actual widget to [EditorStringWidget].
 class EditorString extends EditorBase<String> {
+  /// Creates an [EditorString].
   EditorString({
     super.key,
     required super.owners,
@@ -12,6 +15,7 @@ class EditorString extends EditorBase<String> {
     super.onUpdatedProperty,
   });
 
+  /// Returns an [EditorStringWidget] configured with this editor's parameters.
   @override
   Widget getWidget(BuildContext context) {
     return EditorStringWidget(
@@ -26,8 +30,13 @@ class EditorString extends EditorBase<String> {
 
 /// A [TextField]-based widget for editing string properties.
 ///
-/// When multiple owners have differing values the field starts empty.
-/// Empty input is treated as `null` when the property is nullable.
+/// Applies every keystroke to all [owners] immediately. Two behaviours are
+/// governed by property metadata:
+///
+/// - **Nullable** — when [InspectableProperty.nullable] is `true`, an empty
+///   field is written as `null` instead of an empty string.
+/// - **Mixed-value** — when multiple owners hold differing strings the field
+///   starts empty to indicate a mixed state.
 class EditorStringWidget extends StatefulWidget {
   /// The [Inspectable] objects that own this property.
   final List<Inspectable> owners;
@@ -38,9 +47,10 @@ class EditorStringWidget extends StatefulWidget {
   /// Optional data forwarded to [InspectableProperty.setValue].
   final Object? customData;
 
-  /// Called after the property value is updated.
+  /// Called after the property value is successfully updated.
   final void Function(dynamic value)? onUpdateProperty;
 
+  /// Creates an [EditorStringWidget].
   const EditorStringWidget({
     super.key,
     required this.owners,
@@ -57,18 +67,25 @@ class EditorStringWidget extends StatefulWidget {
 
 /// State for [EditorStringWidget].
 class EditorStringWidgetState extends State<EditorStringWidget> {
-  /// Controller for the string text field.
+  /// Controller that drives the string [TextField].
   late TextEditingController ted;
 
-  /// Dropdown items when the property has a fixed set of allowed values.
+  /// Pre-built dropdown items for when the property supplies a fixed value
+  /// list (currently unused — reserved for future dropdown support).
   List<DropdownMenuItem<String>>? _items;
 
-  /// Whether the property is read-only (disables editing).
+  /// Whether any owner has marked this property as read-only.
   bool readOnlyProperty = false;
 
-  /// Whether the property accepts null values (empty text becomes `null`).
+  /// Whether empty input should be written as `null` rather than `''`.
+  ///
+  /// Derived from [InspectableProperty.nullable] across all owners.
   bool nullableProperty = true;
 
+  /// Reads the initial value from owners, detects read-only / nullable flags,
+  /// and initialises the text controller.
+  ///
+  /// Sets the controller text to `''` when owners hold differing values.
   @override
   void initState() {
     super.initState();
@@ -128,6 +145,11 @@ class EditorStringWidgetState extends State<EditorStringWidget> {
     }
   }*/
 
+  /// Builds a collapsed [TextField] that writes string values back to all
+  /// owners on every keystroke.
+  ///
+  /// When [_items] are available the method currently returns an empty
+  /// [Container] (dropdown mode is reserved for a future release).
   @override
   Widget build(BuildContext context) {
     if (_items != null && _items!.isNotEmpty) {

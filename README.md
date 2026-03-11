@@ -1,36 +1,47 @@
-# Inspectable Property
+# inspectable_property
 
-A Flutter package that adds reflection-like capabilities to your Dart classes. Mix in `Inspectable` to expose a `properties` list that describes your object's fields at runtime — then use the built-in `Inspector` widget to view and edit them visually.
+[![pub package](https://img.shields.io/pub/v/inspectable_property.svg)](https://pub.dev/packages/inspectable_property)
+[![pub points](https://img.shields.io/pub/points/inspectable_property)](https://pub.dev/packages/inspectable_property/score)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+A Flutter package that brings **reflection-like runtime inspection** to your Dart classes. Mix in `Inspectable`, describe your fields with `InspectableProperty`, and drop in the `Inspector` widget to get an instant, fully editable property panel — no code generation required.
+
+---
 
 ## Features
 
-- **Inspectable mixin** — Gives any class a `properties` list of `InspectableProperty` descriptors with getters, setters, and metadata.
-- **Inspector widget** — A ready-to-use property editor that renders a table of type-aware editors for one or more objects.
-- **Built-in editors** — `int`, `double`, `bool`, `String`, and `Enum` types work out of the box.
-- **Multi-object editing** — Select multiple objects and the Inspector shows their common properties; differing values appear blank.
-- **Extensible** — Register custom editors per type or per property via the `customEditor` field.
-- **Property options** — Mark properties as `readOnly`, `nullable`, provide `clamp` ranges (doubles render as sliders), or supply a `values` list.
+- **`Inspectable` mixin** — expose any class's fields as a typed `properties` list at runtime.
+- **`Inspector` widget** — a ready-made property editor that renders type-aware input controls in a clean table layout.
+- **Built-in editors** for `int`, `double`, `bool`, `String`, and `Enum` — works out of the box.
+- **Slider support** — `double` properties render as a `Slider` when a `clamp` range is provided.
+- **Multi-object editing** — pass multiple `Inspectable` objects; common properties are shown and edits apply to all of them simultaneously.
+- **Custom editors** — register your own editor widget per type or per individual property.
+- **Rich metadata** — `readOnly`, `nullable`, `clamp`, `values`, `customEditor`, and sub-property nesting.
 
-## Getting Started
+---
 
-Add the dependency to your `pubspec.yaml`:
+## Getting started
+
+Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  inspectable_property: ^0.0.2
+  inspectable_property: ^0.0.3
 ```
 
-Then run:
+Then fetch dependencies:
 
-```bash
+```sh
 flutter pub get
 ```
+
+---
 
 ## Usage
 
 ### 1. Make a class inspectable
 
-Mix in `Inspectable` and register properties in the constructor:
+Mix in `Inspectable` and register `InspectableProperty` descriptors:
 
 ```dart
 import 'package:inspectable_property/inspectable.dart';
@@ -55,28 +66,28 @@ class Enemy with Inspectable {
       InspectableProperty<int>(
         name: 'health',
         getValue: (obj) => health,
-        setValue: (obj, value, customData) => health = value,
+        setValue: (obj, value, _) => health = value,
       ),
       InspectableProperty<double>(
         name: 'speed',
         getValue: (obj) => speed,
-        setValue: (obj, value, customData) => speed = value,
-        clamp: (0.0, 10.0), // renders as a slider
+        setValue: (obj, value, _) => speed = value,
+        clamp: (0.0, 10.0), // renders as a Slider
       ),
       InspectableProperty<bool>(
         name: 'alive',
         getValue: (obj) => alive,
-        setValue: (obj, value, customData) => alive = value,
+        setValue: (obj, value, _) => alive = value,
       ),
       InspectableProperty<String>(
         name: 'name',
         getValue: (obj) => name,
-        setValue: (obj, value, customData) => name = value,
+        setValue: (obj, value, _) => name = value,
       ),
       InspectableProperty<Enum>(
         name: 'color',
         getValue: (obj) => color,
-        setValue: (obj, value, customData) => color = value,
+        setValue: (obj, value, _) => color = value as Color,
         values: () => Color.values,
       ),
     ]);
@@ -84,9 +95,7 @@ class Enemy with Inspectable {
 }
 ```
 
-### 2. Display the Inspector widget
-
-Drop the `Inspector` widget into your UI and pass it one or more inspectable objects:
+### 2. Show the Inspector widget
 
 ```dart
 import 'package:inspectable_property/inspector.dart';
@@ -96,14 +105,25 @@ final enemy = Enemy();
 Inspector(
   objects: [enemy],
   onUpdatedProperty: (properties, value) {
-    setState(() {});
+    setState(() {}); // rebuild after edits
   },
 )
 ```
 
-### 3. Register custom editors (optional)
+### 3. Edit multiple objects at once
 
-Provide a custom editor for any type via the `editors` map:
+Pass a list of objects to edit them simultaneously. The inspector shows only the properties they share; fields with differing values appear blank until edited.
+
+```dart
+Inspector(
+  objects: [enemy1, enemy2, enemy3],
+  onUpdatedProperty: (properties, value) => setState(() {}),
+)
+```
+
+### 4. Register a custom editor (optional)
+
+Supply your own editor widget for any type via the `editors` map:
 
 ```dart
 Inspector(
@@ -115,18 +135,38 @@ Inspector(
 )
 ```
 
-## Built-in Editors
+---
 
-| Type | Widget | Notes |
-|------|--------|-------|
-| `int` | `TextField` | Integer validation |
-| `double` | `TextField` / `Slider` | Slider when `clamp` is provided |
-| `bool` | `Checkbox` | Tristate when `nullable` is true |
-| `String` | `TextField` | — |
-| `Enum` | `DropdownButton` | Requires `values` to be set |
+## Built-in editors
 
-## Additional Information
+| Type     | Widget            | Notes                                  |
+|----------|-------------------|----------------------------------------|
+| `int`    | `TextField`       | Integer validation                     |
+| `double` | `TextField` / `Slider` | Slider when `clamp` is provided   |
+| `bool`   | `Checkbox`        | Tristate when `nullable: true`         |
+| `String` | `TextField`       | —                                      |
+| `Enum`   | `DropdownButton`  | Requires `values` callback on property |
 
-- Repository: https://github.com/rusoleal/inspectable_property
-- Dart SDK: ^3.10.4
-- Flutter: >=1.17.0
+---
+
+## InspectableProperty options
+
+| Parameter      | Type                     | Description                                              |
+|----------------|--------------------------|----------------------------------------------------------|
+| `name`         | `String`                 | Display name shown in the inspector table                |
+| `getValue`     | `Function`               | Getter — called to read the current value                |
+| `setValue`     | `Function`               | Setter — called when the user commits a change           |
+| `readOnly`     | `bool`                   | Disables editing when `true`                             |
+| `nullable`     | `bool`                   | Allows `null` values (checkbox renders tristate)         |
+| `clamp`        | `(double, double)`       | Min/max range; doubles render as a slider                |
+| `values`       | `Function`               | Provides the list of valid values (required for enums)   |
+| `customEditor` | `EditorBuilder?`         | Per-property custom editor factory                       |
+| `getSubProperties` | `Function?`          | Returns nested `InspectableProperty` list for sub-objects |
+
+---
+
+## Additional information
+
+- **Repository:** [github.com/rusoleal/inspectable_property](https://github.com/rusoleal/inspectable_property)
+- **Issues & feedback:** [github.com/rusoleal/inspectable_property/issues](https://github.com/rusoleal/inspectable_property/issues)
+- Dart SDK `^3.10.4` · Flutter `>=1.17.0`
